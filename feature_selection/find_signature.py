@@ -13,6 +13,8 @@ authors_file = "../text_learning/your_email_authors.pkl"
 word_data = pickle.load( open(words_file, "r"))
 authors = pickle.load( open(authors_file, "r") )
 
+print "word_data: {0}, authors: {1}".format(len(word_data), len(authors))
+
 
 
 ### test_size is the percentage of events assigned to the test set (the
@@ -38,6 +40,16 @@ labels_train   = labels_train[:150]
 
 
 ### your code goes here
+from sklearn import tree
+clf = tree.DecisionTreeClassifier()
+clf.fit(features_train, labels_train)
+pred = clf.predict(features_test)
+print "SCORE: {0}".format(clf.score(features_test, labels_test))
 
+for n, imp in enumerate(clf.feature_importances_):
+	if imp > 0.2:
+		feat = n
+		print "{0}: {1}".format(feat, imp)
 
-
+feat_word = vectorizer.get_feature_names()[feat]
+print "feat_word: {0}".format(feat_word)
