@@ -1,0 +1,5 @@
+matplotlib==2.2.2
+scipy==0.18.1
+nltk==3.2.2
+numpy==1.13.3
+scikit_learn==0.20.1
