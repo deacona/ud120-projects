@@ -31,6 +31,8 @@ labels, features = targetFeatureSplit(data)
 
 from sklearn import tree
 from sklearn import cross_validation
+from sklearn.metrics import confusion_matrix, precision_score, recall_score
+import numpy as np
 
 features_train, features_test, labels_train, labels_test = cross_validation.train_test_split(features, labels, test_size=0.3, random_state=42)
 
@@ -42,6 +44,21 @@ clf.fit(features_train, labels_train)
 # pred = clf.predict(features)
 pred = clf.predict(features_test)
 
+# pred = array([0.0] * 29)
+# pred = np.full(
+#     shape=29,
+#     fill_value=0.0,
+#     dtype=np.float)
+
+# print "Labels: {0}".format(labels_test)
+
+print "pred: {0}".format(pred)
+
 # print "SCORE: {0}".format(clf.score(features, labels))
 print "SCORE: {0}".format(clf.score(features_test, labels_test))
+
+print "PRECISION: {0}".format(precision_score(labels_test, pred))
+print "RECALL: {0}".format(recall_score(labels_test, pred))
+
+print confusion_matrix(labels_test, pred, labels=range(2))
 
