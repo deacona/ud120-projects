@@ -1,0 +1,34 @@
+
+1. Dataset/question(s)
+2. Features
+3. Algorthim(s)
+4. Evaluation
+
+building a person of interest identifier based on financial and email data
+
+Refer to https://review.udacity.com/#!/rubrics/27/view
+Before you start working on the project: Review the final project rubric carefully. Think about the following questions - How will you incorporate each of the rubric criterion into your project? Why are these aspects important? What is your strategy to ensure that your project “meets specifications” in the given criteria? Once you are convinced that you understand each part of the rubric, please start working on your project. Remember to refer to the rubric often to ensure that you are on the right track. 
+
+Resources
+*********
+Python and sklearn
+UD120 mini projects
+final_project/
+	poi_id.py (starter code)
+	final_project_dataset.pkl
+	tester.py
+	emails_by_address/
+
+
+Output
+******
+Data: my_dataset.pkl, my_classifier.pkl, my_feature_list.pkl
+Code: poi_id.py (modified)
+Questions: https://docs.google.com/document/d/1NDgi1PrNJP7WTbfSUuRUnz8yzs5nGVTSzpO7oeNTEWA/edit (You can write your answers in a PDF, Word document, text file, or similar format.)
+
+
+
+
+Refreshers
+**********
+POIs send emails to other POIs at a rate higher than the general population

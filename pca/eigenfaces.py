@@ -71,7 +71,7 @@ X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random
 # n_components = 140
 # n_components = 160
 
-for n_components in [10, 15, 25, 50, 100, 250]:
+for n_components in [120]: #[10, 15, 25, 50, 100, 250]:
   print "Using {0} components...".format(n_components)
 
   # print "Extracting the top %d eigenfaces from %d faces" % (n_components, X_train.shape[0])
@@ -120,7 +120,7 @@ for n_components in [10, 15, 25, 50, 100, 250]:
 # print 'first: ', pca.explained_variance_ratio_[0]
 # print 'second: ', pca.explained_variance_ratio_[1]
 
-raise SystemExit(0) #exit early
+# raise SystemExit(0) #exit early
 
 #                    precision    recall  f1-score   support
 #       avg / total       0.85      0.85      0.85       322
