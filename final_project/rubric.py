@@ -1,12 +1,6 @@
-import logging
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
+# import logging
 
-pd.set_option('float_format', '{:f}'.format)
-pd.set_option('display.max_columns', 30)
-# pd.set_option('display.expand_frame_repr', False)
-logging.basicConfig(format='%(asctime)s - %(levelname)s - %(message)s', level=logging.DEBUG)
+# logging.basicConfig(format='%(asctime)s - %(levelname)s - %(message)s', level=logging.INFO)
 
 def r01_functionality():
 	"""
@@ -14,9 +8,9 @@ def r01_functionality():
 	-------------------------------
 	Code reflects the description in the answers to questions in the writeup. i.e. code performs the functions documented in the writeup and the writeup clearly specifies the final analysis strategy.
 	"""
-	logging.info(r01_functionality.__doc__)
+	print("\n"+r01_functionality.__doc__)
 
-	return
+	raise SystemExit(0) #exit early
 
 
 def r02_usability():
@@ -25,9 +19,9 @@ def r02_usability():
 	-------------------------------
 	poi_id.py can be run to export the dataset, list of features and algorithm, so that the final algorithm can be checked easily using tester.py.
 	"""
-	logging.info(r02_usability.__doc__)
+	print("\n"+r02_usability.__doc__)
 
-	return
+	raise SystemExit(0) #exit early
 
 
 def r03_data_exploration(data_dict):
@@ -42,59 +36,9 @@ def r03_data_exploration(data_dict):
 	    are there features with many missing values? etc.
 
 	"""
-	logging.info(r03_data_exploration.__doc__)
+	print("\n"+r03_data_exploration.__doc__)
 
-	logging.debug("{0} people in dataset".format(len(data_dict)))
-
-	poi_counter = 0
-	missing_counter_all = 0
-	for person_name in data_dict:
-		if data_dict[person_name]["poi"]==1:
-			poi_counter += 1
-		missing_counter = 0
-		for feature_name in data_dict[person_name]:
-			if data_dict[person_name][feature_name] == "NaN":
-				missing_counter += 1
-		# logging.debug("{0} has {1} missing features".format(person_name, missing_counter))
-		missing_counter_all += missing_counter
-	logging.debug("Overall there are {0} missing features".format(missing_counter_all))
-
-	logging.debug("{0} pois in dataset".format(poi_counter))
-
-	# logging.info(sum(len(x) for x in data_dict.values()))
-	df = pd.DataFrame.from_dict(data_dict, orient='index')
-	df.replace({"NaN": np.nan}, inplace=True)
-	df.info()
-	print df.describe()
-	# print df.head(5)
-	# print df.shape
-	feature_counter = len(df.columns) - 1 #exclude target variable
-	logging.debug("{0} features in dataset".format(feature_counter))
-	# df.info()
-
-	logging.debug("Info on Jeff Skilling...\n{0}".format(data_dict["SKILLING JEFFREY K"]))
-	# print df.loc["SKILLING JEFFREY K"]
-
-	for feature in ["loan_advances", "director_fees"]:
-		logging.debug("Employees with {0}...\n".format(feature))
-		print df[df[feature] > 0][[feature, "poi"]]
-
-	logging.debug("View all email addresses...\n")
-	# print df[df["email_address"].notnull()][["email_address", "poi"]]
-	print df[df["poi"]][["email_address", "poi"]]
-
-	# num_fields = df.columns.values.tolist()
-	# num_fields.remove("email_address")
-	# num_fields.remove("poi")
-	# logging.debug("num_fields: {0}".format(num_fields))
-
-	# logging.debug("Plot histograms for all numeric fields...")
-	# fig = plt.figure()
-	# hist = df.hist(column=num_fields, bins=146)
-	# plt.show()
-	# # fig.savefig('histograms.pdf')
-
-	return
+	raise SystemExit(0) #exit early
 
 
 def r04_outlier_investigation():
@@ -103,70 +47,20 @@ def r04_outlier_investigation():
 	-------------------------------
 	Student response identifies outlier(s) in the financial data, and explains how they are removed or otherwise handled.
 	"""
-	logging.info(r04_outlier_investigation.__doc__)
+	print("\n"+r04_outlier_investigation.__doc__)
 
-	return
+	raise SystemExit(0) #exit early
 
 
-def r05_create_new_features(data_dict):
+def r05_create_new_features():
 	"""
 	Optimize Feature Selection/Engineering - Create new features (related lesson: Feature Selection)
 	-------------------------------
 	At least one new feature is implemented. Justification for that feature is provided in the written response. The effect of that feature on final algorithm performance is tested or its strength is compared to other features in feature selection. The student is not required to include their new feature in their final feature set.
 	"""
-	logging.info(r05_create_new_features.__doc__)
+	print("\n"+r05_create_new_features.__doc__)
 
-	def computeFraction( poi_messages, all_messages ):
-	    """ given a number messages to/from POI (numerator) 
-	        and number of all messages to/from a person (denominator),
-	        return the fraction of messages to/from that person
-	        that are from/to a POI
-	    """
-	    ### you fill in this code, so that it returns either
-	    ###     the fraction of all messages to this person that come from POIs
-	    ###     or
-	    ###     the fraction of all messages from this person that are sent to POIs
-	    ### the same code can be used to compute either quantity
-
-	    ### beware of "NaN" when there is no known email address (and so
-	    ### no filled email features), and integer division!
-	    ### in case of poi_messages or all_messages having "NaN" value, return 0.
-	    fraction = 0.
-	    
-	    def isNaN(num):
-	        return num != num
-	    # import math
-	        
-	    if (not isNaN(float(poi_messages))) and (not isNaN(float(all_messages))):
-	        fraction = float(poi_messages) / float(all_messages)
-
-	    return fraction
-
-
-	# submit_dict = {}
-	for name in data_dict:
-
-	    data_point = data_dict[name]
-
-	    # print
-	    from_poi_to_this_person = data_point["from_poi_to_this_person"]
-	    to_messages = data_point["to_messages"]
-	    fraction_from_poi = computeFraction( from_poi_to_this_person, to_messages )
-	    # print fraction_from_poi
-	    data_point["fraction_from_poi"] = fraction_from_poi
-
-	    from_this_person_to_poi = data_point["from_this_person_to_poi"]
-	    from_messages = data_point["from_messages"]
-	    fraction_to_poi = computeFraction( from_this_person_to_poi, from_messages )
-	    # print fraction_to_poi
-	    # submit_dict[name]={"from_poi_to_this_person":fraction_from_poi,
-	                       # "from_this_person_to_poi":fraction_to_poi}
-	    data_dict[name].update( {"from_poi_to_this_person":fraction_from_poi} )
-	    data_dict[name].update( {"from_this_person_to_poi":fraction_to_poi} )
-	    data_point["fraction_to_poi"] = fraction_to_poi
-	    
-	# print data_dict
-	return data_dict
+	raise SystemExit(0) #exit early
 
 
 def r06_intelligently_select():
@@ -175,9 +69,9 @@ def r06_intelligently_select():
 	-------------------------------
 	Univariate or recursive feature selection is deployed, or features are selected by hand (different combinations of features are attempted, and the performance is documented for each one). Features that are selected are reported and the number of features selected is justified. For an algorithm that supports getting the feature importances (e.g. decision tree) or feature scores (e.g. SelectKBest), those are documented as well.
 	"""
-	logging.info(r06_intelligently_select.__doc__)
+	print("\n"+r06_intelligently_select.__doc__)
 
-	return
+	raise SystemExit(0) #exit early
 
 
 def r07_properly_scale():
@@ -186,9 +80,9 @@ def r07_properly_scale():
 	-------------------------------
 	If algorithm calls for scaled features, feature scaling is deployed.
 	"""
-	logging.info(r07_properly_scale.__doc__)
+	print("\n"+r07_properly_scale.__doc__)
 
-	return
+	raise SystemExit(0) #exit early
 
 
 def r08_pick_an_algorithm():
@@ -197,9 +91,9 @@ def r08_pick_an_algorithm():
 	-------------------------------
 	At least two different algorithms are attempted and their performance is compared, with the best performing one used in the final analysis.
 	"""
-	logging.info(r08_pick_an_algorithm.__doc__)
+	print("\n"+r08_pick_an_algorithm.__doc__)
 
-	return
+	raise SystemExit(0) #exit early
 
 
 def r09_discuss_parameter():
@@ -208,9 +102,9 @@ def r09_discuss_parameter():
 	-------------------------------
 	Response addresses what it means to perform parameter tuning and why it is important.
 	"""
-	logging.info(r09_discuss_parameter.__doc__)
+	print("\n"+r09_discuss_parameter.__doc__)
 
-	return
+	raise SystemExit(0) #exit early
 
 
 def r10_tune_the_algorithm():
@@ -224,9 +118,9 @@ def r10_tune_the_algorithm():
 	    Parameter tuning incorporated into algorithm selection (i.e. parameters tuned for more than one algorithm, and best algorithm-tune combination selected for final analysis).
 
 	"""
-	logging.info(r10_tune_the_algorithm.__doc__)
+	print("\n"+r10_tune_the_algorithm.__doc__)
 
-	return
+	raise SystemExit(0) #exit early
 
 
 def r11_usage_of_evaluation():
@@ -235,9 +129,9 @@ def r11_usage_of_evaluation():
 	-------------------------------
 	At least two appropriate metrics are used to evaluate algorithm performance (e.g. precision and recall), and the student articulates what those metrics measure in context of the project task.
 	"""
-	logging.info(r11_usage_of_evaluation.__doc__)
+	print("\n"+r11_usage_of_evaluation.__doc__)
 
-	return
+	raise SystemExit(0) #exit early
 
 
 def r12_discuss_validation():
@@ -246,9 +140,9 @@ def r12_discuss_validation():
 	-------------------------------
 	Response addresses what validation is and why it is important.
 	"""
-	logging.info(r12_discuss_validation.__doc__)
+	print("\n"+r12_discuss_validation.__doc__)
 
-	return
+	raise SystemExit(0) #exit early
 
 
 def r13_validation_strategy():
@@ -257,9 +151,9 @@ def r13_validation_strategy():
 	-------------------------------
 	Performance of the final algorithm selected is assessed by splitting the data into training and testing sets or through the use of cross validation, noting the specific type of validation performed.
 	"""
-	logging.info(r13_validation_strategy.__doc__)
+	print("\n"+r13_validation_strategy.__doc__)
 
-	return
+	raise SystemExit(0) #exit early
 
 
 def r14_algorithm_performance():
@@ -268,8 +162,8 @@ def r14_algorithm_performance():
 	-------------------------------
 	When tester.py is used to evaluate performance, precision and recall are both at least 0.3.
 	"""
-	logging.info(r14_algorithm_performance.__doc__)
+	print("\n"+r14_algorithm_performance.__doc__)
 
-	return
+	raise SystemExit(0) #exit early
 
 
