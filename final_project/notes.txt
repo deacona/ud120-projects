@@ -32,3 +32,4 @@ Questions: https://docs.google.com/document/d/1NDgi1PrNJP7WTbfSUuRUnz8yzs5nGVTSz
 Refreshers
 **********
 POIs send emails to other POIs at a rate higher than the general population
+selector = SelectPercentile(f_classif, percentile=10)
