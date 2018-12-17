@@ -7,13 +7,17 @@ import pandas as pd
 from pandas.tools.plotting import scatter_matrix
 import numpy as np
 import matplotlib.pyplot as plt
+from itertools import compress
+
 from sklearn.feature_selection import SelectKBest, f_classif
 from sklearn import tree
 from sklearn.naive_bayes import GaussianNB
 from sklearn.svm import SVC
 from sklearn.ensemble.weight_boosting import AdaBoostClassifier
 from sklearn.cross_validation import train_test_split
-from itertools import compress
+from sklearn.grid_search import GridSearchCV
+from sklearn.cluster import KMeans
+from sklearn.preprocessing import MinMaxScaler
 
 pd.set_option('float_format', '{:f}'.format)
 pd.set_option('display.max_columns', 30)
@@ -183,21 +187,48 @@ def select_features(features_list, my_dataset):
 	return selected_features_list, labels, selected_features
 
 
+def scale_features(original_features):
+	scaler = MinMaxScaler()
+	# StandardScaler()
+	rescaled_features = scaler.fit_transform(original_features)
+	return rescaled_features
+
+
 def select_algorithm(labels, features):
 	print("\n\n")
 	# Split testing and training data
-		# test_size
+		# test_size???
 	# Use different algorithms (2+)
 		# Naive Bayes
 		# Support Vector Machines
+		# K-Means???
+		# Ada Boost
 	# Tune parameters (try 3+, use 1+)
 		# GridSearchCV
 	# Evaluation metric (2+)
 		# Precision > 0.3
 		# Recall > 0.3
+		# Highest Accuracy???
 
 	sizes = [0.1, 0.2, 0.3, 0.4, 0.5]
 	algos = [GaussianNB(), SVC(kernel='rbf'), AdaBoostClassifier(n_estimators=10)]
+
+	parameters = {'kernel':('linear', 'rbf'), 'C':[1, 10]}
+	svr = svm.SVC()
+	clf = grid_search.GridSearchCV(svr, parameters)
+	clf.fit(iris.data, iris.target)
+
+	t0 = time()
+	param_grid = {
+	   'C': [1e3, 5e3, 1e4, 5e4, 1e5],
+	    'gamma': [0.0001, 0.0005, 0.001, 0.005, 0.01, 0.1],
+	    }
+	# for sklearn version 0.16 or prior, the class_weight parameter value is 'auto'
+	clf = GridSearchCV(SVC(kernel='rbf', class_weight='balanced'), param_grid)
+	clf = clf.fit(X_train_pca, y_train)
+	# print "done in %0.3fs" % (time() - t0)
+	# print "Best estimator found by grid search:"
+	# print clf.best_estimator_
 
 	for size in sizes:
 		for algo in algos:
@@ -244,9 +275,12 @@ features_list = add_features(features_list, data_dict)
 my_dataset = data_dict
 
 features_list, labels, features = select_features(features_list, my_dataset)
-explore_dataset(features_list, data_dict, createviz="final")
 # rubric.r06_intelligently_select()
-rubric.r07_properly_scale()
+
+explore_dataset(features_list, data_dict, createviz="final")
+
+features = scale_features(features)
+# rubric.r07_properly_scale()
 
 
 ### Task 4: Try a varity of classifiers

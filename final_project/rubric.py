@@ -7,7 +7,7 @@ def r01_functionality():
 	"""
 	# print("\n"+r01_functionality.__doc__)
 
-	#raise SystemExit(0) #exit early
+	raise SystemExit(0) #exit early
 
 
 def r02_usability():
@@ -18,7 +18,7 @@ def r02_usability():
 	"""
 	# print("\n"+r02_usability.__doc__)
 
-	#raise SystemExit(0) #exit early
+	raise SystemExit(0) #exit early
 
 
 def r03_data_exploration():
@@ -35,7 +35,7 @@ def r03_data_exploration():
 	"""
 	# print("\n"+r03_data_exploration.__doc__)
 
-	#raise SystemExit(0) #exit early
+	raise SystemExit(0) #exit early
 
 
 def r04_outlier_investigation():
@@ -46,7 +46,7 @@ def r04_outlier_investigation():
 	"""
 	# print("\n"+r04_outlier_investigation.__doc__)
 
-	#raise SystemExit(0) #exit early
+	raise SystemExit(0) #exit early
 
 
 def r05_create_new_features():
@@ -57,7 +57,7 @@ def r05_create_new_features():
 	"""
 	# print("\n"+r05_create_new_features.__doc__)
 
-	#raise SystemExit(0) #exit early
+	raise SystemExit(0) #exit early
 
 
 def r06_intelligently_select():
@@ -68,7 +68,7 @@ def r06_intelligently_select():
 	"""
 	# print("\n"+r06_intelligently_select.__doc__)
 
-	#raise SystemExit(0) #exit early
+	raise SystemExit(0) #exit early
 
 
 def r07_properly_scale():
@@ -79,7 +79,7 @@ def r07_properly_scale():
 	"""
 	# print("\n"+r07_properly_scale.__doc__)
 
-	#raise SystemExit(0) #exit early
+	raise SystemExit(0) #exit early
 
 
 def r08_pick_an_algorithm():
@@ -90,7 +90,7 @@ def r08_pick_an_algorithm():
 	"""
 	# print("\n"+r08_pick_an_algorithm.__doc__)
 
-	#raise SystemExit(0) #exit early
+	raise SystemExit(0) #exit early
 
 
 def r09_discuss_parameter():
@@ -101,7 +101,7 @@ def r09_discuss_parameter():
 	"""
 	# print("\n"+r09_discuss_parameter.__doc__)
 
-	#raise SystemExit(0) #exit early
+	raise SystemExit(0) #exit early
 
 
 def r10_tune_the_algorithm():
@@ -117,7 +117,7 @@ def r10_tune_the_algorithm():
 	"""
 	# print("\n"+r10_tune_the_algorithm.__doc__)
 
-	#raise SystemExit(0) #exit early
+	raise SystemExit(0) #exit early
 
 
 def r11_usage_of_evaluation():
@@ -128,7 +128,7 @@ def r11_usage_of_evaluation():
 	"""
 	# print("\n"+r11_usage_of_evaluation.__doc__)
 
-	#raise SystemExit(0) #exit early
+	raise SystemExit(0) #exit early
 
 
 def r12_discuss_validation():
@@ -139,7 +139,7 @@ def r12_discuss_validation():
 	"""
 	# print("\n"+r12_discuss_validation.__doc__)
 
-	#raise SystemExit(0) #exit early
+	raise SystemExit(0) #exit early
 
 
 def r13_validation_strategy():
@@ -150,7 +150,7 @@ def r13_validation_strategy():
 	"""
 	# print("\n"+r13_validation_strategy.__doc__)
 
-	#raise SystemExit(0) #exit early
+	raise SystemExit(0) #exit early
 
 
 def r14_algorithm_performance():
@@ -161,6 +161,6 @@ def r14_algorithm_performance():
 	"""
 	# print("\n"+r14_algorithm_performance.__doc__)
 
-	#raise SystemExit(0) #exit early
+	raise SystemExit(0) #exit early
 
 
