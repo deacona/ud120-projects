@@ -8,16 +8,20 @@ from pandas.tools.plotting import scatter_matrix
 import numpy as np
 import matplotlib.pyplot as plt
 from itertools import compress
+from time import time
 
 from sklearn.feature_selection import SelectKBest, f_classif
 from sklearn import tree
 from sklearn.naive_bayes import GaussianNB
 from sklearn.svm import SVC
+from sklearn.neighbors import KNeighborsClassifier
 from sklearn.ensemble.weight_boosting import AdaBoostClassifier
-from sklearn.cross_validation import train_test_split
-from sklearn.grid_search import GridSearchCV
-from sklearn.cluster import KMeans
 from sklearn.preprocessing import MinMaxScaler
+from sklearn.metrics import classification_report
+# from sklearn.grid_search import GridSearchCV
+from sklearn.model_selection import GridSearchCV
+# from sklearn.cross_validation import train_test_split
+from sklearn.model_selection import train_test_split
 
 pd.set_option('float_format', '{:f}'.format)
 pd.set_option('display.max_columns', 30)
@@ -26,9 +30,8 @@ pd.set_option('display.max_columns', 30)
 sys.path.append("../tools/")
 
 from feature_format import featureFormat, targetFeatureSplit
-from tester import dump_classifier_and_data
+from tester import dump_classifier_and_data, test_classifier
 
-import rubric
 NOSTATS=True
 
 
@@ -93,7 +96,6 @@ def explore_dataset(features_list, data_dict, name=None, feature=None, createviz
 	plt.savefig('boxplot_{0}.png'.format(createviz))
 
 	plt.show()
-
 	return
 
 
@@ -165,6 +167,7 @@ def select_features(features_list, my_dataset):
 
 	kbest = 0
 	selected_features_list = ["poi"] ## always included
+	print("\n\n")
 	print("Finding most important features...")
 	for n, imp in enumerate(clf.feature_importances_):
 		print "{0}, {1}, {2}".format(n, features_list[n+1], imp)
@@ -196,53 +199,70 @@ def scale_features(original_features):
 
 def select_algorithm(labels, features):
 	print("\n\n")
-	# Split testing and training data
-		# test_size???
-	# Use different algorithms (2+)
-		# Naive Bayes
-		# Support Vector Machines
-		# K-Means???
-		# Ada Boost
-	# Tune parameters (try 3+, use 1+)
-		# GridSearchCV
-	# Evaluation metric (2+)
-		# Precision > 0.3
-		# Recall > 0.3
-		# Highest Accuracy???
 
-	sizes = [0.1, 0.2, 0.3, 0.4, 0.5]
-	algos = [GaussianNB(), SVC(kernel='rbf'), AdaBoostClassifier(n_estimators=10)]
+	sizes = [0.1] #, 0.2, 0.3, 0.4, 0.5]
+	algos = [
+			{"Classifier": GaussianNB(),
+			"ParamGrid": {
+			    },
+			},
+			{"Classifier": SVC(kernel="rbf"),
+			"ParamGrid": {
+				'C': [1e3, 5e3, 1e4, 5e4, 1e5],
+			    'gamma': [0.0001, 0.0005, 0.001, 0.005, 0.01, 0.1],
+				},
+			},
+			{"Classifier": KNeighborsClassifier(),
+			"ParamGrid": {
+				"n_neighbors": [3, 5, 7],
+				"p": [1, 2, 3]
+			    },
+			},
+			{"Classifier": AdaBoostClassifier(n_estimators=10),
+			"ParamGrid": {
+				"n_estimators": [30, 40, 50],
+				"learning_rate": [0.5, 1.0, 1.5],
+			    },
+			},
+		]
 
-	parameters = {'kernel':('linear', 'rbf'), 'C':[1, 10]}
-	svr = svm.SVC()
-	clf = grid_search.GridSearchCV(svr, parameters)
-	clf.fit(iris.data, iris.target)
-
-	t0 = time()
-	param_grid = {
-	   'C': [1e3, 5e3, 1e4, 5e4, 1e5],
-	    'gamma': [0.0001, 0.0005, 0.001, 0.005, 0.01, 0.1],
-	    }
-	# for sklearn version 0.16 or prior, the class_weight parameter value is 'auto'
-	clf = GridSearchCV(SVC(kernel='rbf', class_weight='balanced'), param_grid)
-	clf = clf.fit(X_train_pca, y_train)
-	# print "done in %0.3fs" % (time() - t0)
-	# print "Best estimator found by grid search:"
-	# print clf.best_estimator_
+	best_clf = None
+	best_score = 0
 
 	for size in sizes:
 		for algo in algos:
-			name = algo.__doc__[:24].strip()
+			name = algo["Classifier"].__doc__[:24].strip()
+			print("\n\n")
 			print("Attempting with test_size={0}, using {1}...".format(size, name))
 			features_train, features_test, labels_train, labels_test = \
 			    train_test_split(features, labels, test_size=size, random_state=42)
 
-			clf = algo
+			t0 = time()
+			clf = GridSearchCV(algo["Classifier"], algo["ParamGrid"])
 			clf.fit(features_train, labels_train)
+			print("Done in %0.3fs" % (time() - t0))
+			print("Best estimator found by grid search:")
+			print(clf.best_estimator_)
+			score = clf.score(features_test, labels_test)
+			print("Score: {0}".format(score))
 
-			print("SCORE: {0}".format(clf.score(features_test, labels_test)))
+			labels_pred = clf.predict(features_test)
+			print("Classification report:")
+			print(classification_report(labels_test, labels_pred))
 
-	return clf
+			if score > best_score:
+				best_score = score
+				best_clf = clf.best_estimator_
+
+	print("\n\n")				
+	print("Best classifier:")
+	print(best_clf)
+	print("Best score: {0}".format(best_score))
+	labels_pred = best_clf.predict(features_test)
+	print("Best classification report:")
+	print(classification_report(labels_test, labels_pred))
+
+	return best_clf
 
 
 ### Task 1: Select what features you'll use.
@@ -255,33 +275,24 @@ features_list = ['poi', 'salary', 'deferral_payments', 'total_payments', 'loan_a
 with open("final_project_dataset.pkl", "r") as data_file:
 	data_dict = pickle.load(data_file)
 
-# rubric.r01_functionality()
-# rubric.r02_usability()
-# rubric.r03_data_exploration()
 explore_dataset(features_list, data_dict, createviz="initial")
 explore_dataset(features_list, data_dict, feature="loan_advances")
 explore_dataset(features_list, data_dict, feature="director_fees")
 explore_dataset(features_list, data_dict, feature="email_address")
 
 ### Task 2: Remove outliers
-# rubric.r04_outlier_investigation()
 explore_dataset(features_list, data_dict, name="TOTAL")
 remove_outliers(data_dict)
 
 ### Task 3: Create new feature(s)
-# rubric.r05_create_new_features()
 features_list = add_features(features_list, data_dict)
 ### Store to my_dataset for easy export below.
 my_dataset = data_dict
 
 features_list, labels, features = select_features(features_list, my_dataset)
-# rubric.r06_intelligently_select()
-
 explore_dataset(features_list, data_dict, createviz="final")
 
 features = scale_features(features)
-# rubric.r07_properly_scale()
-
 
 ### Task 4: Try a varity of classifiers
 ### Please name your classifier clf for easy export below.
@@ -305,18 +316,11 @@ clf = select_algorithm(labels, features)
 # from sklearn.cross_validation import train_test_split
 # features_train, features_test, labels_train, labels_test = \
 #     train_test_split(features, labels, test_size=0.3, random_state=42)
-
-rubric.r08_pick_an_algorithm()
-rubric.r09_discuss_parameter()
-rubric.r10_tune_the_algorithm()
+test_classifier(clf, my_dataset, features_list)
 
 ### Task 6: Dump your classifier, dataset, and features_list so anyone can
 ### check your results. You do not need to change anything below, but make sure
 ### that the version of poi_id.py that you submit can be run on its own and
 ### generates the necessary .pkl files for validating your results.
-rubric.r11_usage_of_evaluation()
-rubric.r12_discuss_validation()
-rubric.r13_validation_strategy()
-rubric.r14_algorithm_performance()
 
 dump_classifier_and_data(clf, my_dataset, features_list)
