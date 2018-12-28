@@ -17,11 +17,12 @@ from sklearn.svm import SVC
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.ensemble.weight_boosting import AdaBoostClassifier
 from sklearn.preprocessing import MinMaxScaler
-from sklearn.metrics import classification_report
+from sklearn.metrics import classification_report, f1_score
 # from sklearn.grid_search import GridSearchCV
 from sklearn.model_selection import GridSearchCV
 # from sklearn.cross_validation import train_test_split
 from sklearn.model_selection import train_test_split
+# from sklearn.model_selection import KFold
 
 pd.set_option('float_format', '{:f}'.format)
 pd.set_option('display.max_columns', 30)
@@ -197,10 +198,11 @@ def scale_features(original_features):
 	return rescaled_features
 
 
-def select_algorithm(labels, features):
+def select_algorithm(labels, features): # , my_dataset, features_list):
 	print("\n\n")
 
-	sizes = [0.1] #, 0.2, 0.3, 0.4, 0.5]
+	sizes = [0.1] #, 0.2, 0.3] #, 0.4, 0.5] ## train_test_split
+	# sizes = [10] #5, 10, 15, 20] ## KFold
 	algos = [
 			{"Classifier": GaussianNB(),
 			"ParamGrid": {
@@ -218,7 +220,7 @@ def select_algorithm(labels, features):
 				"p": [1, 2, 3]
 			    },
 			},
-			{"Classifier": AdaBoostClassifier(n_estimators=10),
+			{"Classifier": AdaBoostClassifier(),
 			"ParamGrid": {
 				"n_estimators": [30, 40, 50],
 				"learning_rate": [0.5, 1.0, 1.5],
@@ -236,9 +238,22 @@ def select_algorithm(labels, features):
 			print("Attempting with test_size={0}, using {1}...".format(size, name))
 			features_train, features_test, labels_train, labels_test = \
 			    train_test_split(features, labels, test_size=size, random_state=42)
+			# print("Attempting with kfolds={0}, using {1}...".format(size, name))
+			# kf = KFold(n_splits=size, shuffle=True, random_state=42)
+			# for train_index, test_index in kf.split(features):
+				# features_train = [features[ii] for ii in train_index]
+				# features_test = [features[ii] for ii in test_index]
+				# labels_train = [labels[ii] for ii in train_index]
+				# labels_test = [labels[ii] for ii in test_index]
+			# print("Attempting with kfolds={0} in GridSearchCV, using {1}...".format(size, name))
+			# features_train = features
+			# labels_train = labels
+			# features_test = features
+			# labels_test = labels
 
 			t0 = time()
-			clf = GridSearchCV(algo["Classifier"], algo["ParamGrid"])
+			# folds=int(1/size)
+			clf = GridSearchCV(algo["Classifier"], algo["ParamGrid"]) #, cv=folds)
 			clf.fit(features_train, labels_train)
 			print("Done in %0.3fs" % (time() - t0))
 			print("Best estimator found by grid search:")
@@ -250,8 +265,16 @@ def select_algorithm(labels, features):
 			print("Classification report:")
 			print(classification_report(labels_test, labels_pred))
 
-			if score > best_score:
-				best_score = score
+			f1 = f1_score(labels_test, labels_pred)
+			print("F1 score: {0}".format(f1))
+
+			# test_classifier(clf, my_dataset, features_list)
+
+			# if score > best_score:
+			# 	best_score = score
+			# 	best_clf = clf.best_estimator_
+			if f1 > best_score:
+				best_score = f1
 				best_clf = clf.best_estimator_
 
 	print("\n\n")				
@@ -303,7 +326,7 @@ features = scale_features(features)
 # Provided to give you a starting point. Try a variety of classifiers.
 # from sklearn.naive_bayes import GaussianNB
 # clf = GaussianNB()
-clf = select_algorithm(labels, features)
+clf = select_algorithm(labels, features) #, my_dataset, features_list)
 
 ### Task 5: Tune your classifier to achieve better than .3 precision and recall 
 ### using our testing script. Check the tester.py script in the final project
