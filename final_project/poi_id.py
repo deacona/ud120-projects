@@ -11,7 +11,7 @@ from itertools import compress
 from time import time
 
 from sklearn.feature_selection import SelectKBest, f_classif
-from sklearn import tree
+from sklearn.tree import DecisionTreeClassifier
 from sklearn.naive_bayes import GaussianNB
 from sklearn.svm import SVC
 from sklearn.neighbors import KNeighborsClassifier
@@ -21,8 +21,8 @@ from sklearn.metrics import classification_report, f1_score
 # from sklearn.grid_search import GridSearchCV
 from sklearn.model_selection import GridSearchCV
 # from sklearn.cross_validation import train_test_split
-from sklearn.model_selection import train_test_split
-# from sklearn.model_selection import KFold
+# from sklearn.model_selection import train_test_split
+from sklearn.model_selection import KFold, cross_val_score
 
 pd.set_option('float_format', '{:f}'.format)
 pd.set_option('display.max_columns', 30)
@@ -163,7 +163,7 @@ def select_features(features_list, my_dataset):
 	data = featureFormat(my_dataset, features_list, sort_keys = True)
 	labels, features = targetFeatureSplit(data)
 
-	clf = tree.DecisionTreeClassifier(random_state=1)
+	clf = DecisionTreeClassifier(random_state=1)
 	clf.fit(features, labels)
 
 	kbest = 0
@@ -201,89 +201,130 @@ def scale_features(original_features):
 def select_algorithm(labels, features): # , my_dataset, features_list):
 	print("\n\n")
 
-	sizes = [0.1] #, 0.2, 0.3] #, 0.4, 0.5] ## train_test_split
-	# sizes = [10] #5, 10, 15, 20] ## KFold
 	algos = [
-			{"Classifier": GaussianNB(),
+			{"Name": "NB",
+			"Classifier": GaussianNB(),
 			"ParamGrid": {
 			    },
 			},
-			{"Classifier": SVC(kernel="rbf"),
+			{"Name": "SVM",
+			"Classifier": SVC(),
 			"ParamGrid": {
-				'C': [1e3, 5e3, 1e4, 5e4, 1e5],
-			    'gamma': [0.0001, 0.0005, 0.001, 0.005, 0.01, 0.1],
+				'kernel': ['linear', 'rbf'],
+				'C': [1, 1e3, 5e3, 1e4, 5e4, 1e5],
+			    'gamma': ['auto', 0.0001, 0.0005, 0.001, 0.005, 0.01, 0.1],
+			    'max_iter': [-1, 1, 2, 3, 4, 5],
 				},
 			},
-			{"Classifier": KNeighborsClassifier(),
+			{"Name": "KNN",
+			"Classifier": KNeighborsClassifier(),
 			"ParamGrid": {
-				"n_neighbors": [3, 5, 7],
-				"p": [1, 2, 3]
+				"n_neighbors": [3, 4, 5, 6, 7, 8, 9],
+				"p": [1, 2, 3],
+				'algorithm': ['auto', 'ball_tree', 'kd_tree', 'brute'],
 			    },
 			},
-			{"Classifier": AdaBoostClassifier(),
+			{"Name": "ADA",
+			"Classifier": AdaBoostClassifier(),
 			"ParamGrid": {
-				"n_estimators": [30, 40, 50],
-				"learning_rate": [0.5, 1.0, 1.5],
+				"n_estimators": [10, 20, 30, 40, 50, 60, 70, 80],
+				"learning_rate": [0.5, 1.0, 1.5, 2.0],
+				'algorithm': ['SAMME', 'SAMME.R'],
+			    },
+			},
+			{"Name": "CART",
+			"Classifier": DecisionTreeClassifier(),
+			"ParamGrid": {
+				"min_samples_split": [2, 3, 4, 5],
+				"max_depth": [None, 4, 5, 6, 7, 8],
+				'criterion': ['gini', 'entropy'],
 			    },
 			},
 		]
 
+	results = []
+	names = []
+	scoring = 'accuracy'
+	seed = 42
+	# sizes = [0.1] #, 0.2, 0.3] #, 0.4, 0.5] ## train_test_split
+	# sizes = [10] #5, 10, 15, 20] ## KFold
+	folds = 10 #int(1/size)
+
 	best_clf = None
 	best_score = 0
 
-	for size in sizes:
-		for algo in algos:
-			name = algo["Classifier"].__doc__[:24].strip()
-			print("\n\n")
-			print("Attempting with test_size={0}, using {1}...".format(size, name))
-			features_train, features_test, labels_train, labels_test = \
-			    train_test_split(features, labels, test_size=size, random_state=42)
-			# print("Attempting with kfolds={0}, using {1}...".format(size, name))
-			# kf = KFold(n_splits=size, shuffle=True, random_state=42)
-			# for train_index, test_index in kf.split(features):
-				# features_train = [features[ii] for ii in train_index]
-				# features_test = [features[ii] for ii in test_index]
-				# labels_train = [labels[ii] for ii in train_index]
-				# labels_test = [labels[ii] for ii in test_index]
-			# print("Attempting with kfolds={0} in GridSearchCV, using {1}...".format(size, name))
-			# features_train = features
-			# labels_train = labels
-			# features_test = features
-			# labels_test = labels
+	for algo in algos:
+		# name = algo["Classifier"].__doc__[:24].strip()
+		name = algo["Name"]
+		print("\n\n")
 
-			t0 = time()
-			# folds=int(1/size)
-			clf = GridSearchCV(algo["Classifier"], algo["ParamGrid"]) #, cv=folds)
-			clf.fit(features_train, labels_train)
-			print("Done in %0.3fs" % (time() - t0))
-			print("Best estimator found by grid search:")
-			print(clf.best_estimator_)
-			score = clf.score(features_test, labels_test)
-			print("Score: {0}".format(score))
+		kfold = KFold(n_splits=folds, random_state=seed)
+		clf = GridSearchCV(algo["Classifier"], algo["ParamGrid"], cv=kfold)
+		cv_results = cross_val_score(clf, features, labels, cv=kfold, scoring=scoring)
+		results.append(cv_results)
+		names.append(name)
+		score = cv_results.mean()
+		msg = "{0}: {1} ({2})".format(name, score, cv_results.std())
+		print(msg)
 
-			labels_pred = clf.predict(features_test)
-			print("Classification report:")
-			print(classification_report(labels_test, labels_pred))
+		# print("Attempting with test_size={0}, using {1}...".format(size, name))
+		# features_train, features_test, labels_train, labels_test = \
+		#     train_test_split(features, labels, test_size=size, random_state=42)
+		# print("Attempting with kfolds={0}, using {1}...".format(size, name))
+		# kf = KFold(n_splits=size, shuffle=True, random_state=42)
+		# for train_index, test_index in kf.split(features):
+			# features_train = [features[ii] for ii in train_index]
+			# features_test = [features[ii] for ii in test_index]
+			# labels_train = [labels[ii] for ii in train_index]
+			# labels_test = [labels[ii] for ii in test_index]
+		# print("Attempting with GridSearchCV(cv={0}), using {1}...".format(folds, name))
+		# features_train = features
+		# labels_train = labels
+		# features_test = features
+		# labels_test = labels
 
-			f1 = f1_score(labels_test, labels_pred)
-			print("F1 score: {0}".format(f1))
+		# t0 = time()
+		# clf = GridSearchCV(algo["Classifier"], algo["ParamGrid"], cv=folds)
+		# clf.fit(features_train, labels_train)
+		# print("Done in %0.3fs" % (time() - t0))
+		# print("Best estimator found by grid search:")
+		# print(clf.best_estimator_)
+		# score = clf.score(features_test, labels_test)
+		# print("Score: {0}".format(score))
 
-			# test_classifier(clf, my_dataset, features_list)
+		# labels_pred = clf.predict(features_test)
+		# print("Classification report:")
+		# print(classification_report(labels_test, labels_pred))
 
-			# if score > best_score:
-			# 	best_score = score
-			# 	best_clf = clf.best_estimator_
-			if f1 > best_score:
-				best_score = f1
-				best_clf = clf.best_estimator_
+		# f1 = f1_score(labels_test, labels_pred)
+		# print("F1 score: {0}".format(f1))
+
+		# # test_classifier(clf, my_dataset, features_list)
+
+		if score > best_score:
+			best_score = score
+			clf.fit(features, labels)
+			best_clf = clf.best_estimator_
+		# # if f1 > best_score:
+		# # 	best_score = f1
+		# # 	best_clf = clf.best_estimator_
+
+	# boxplot algorithm comparison
+	fig = plt.figure()
+	fig.suptitle('Algorithm Comparison')
+	ax = fig.add_subplot(111)
+	plt.boxplot(results)
+	ax.set_xticklabels(names)
+	plt.savefig('algorithm_comparison.png')
+	plt.show()
 
 	print("\n\n")				
 	print("Best classifier:")
 	print(best_clf)
 	print("Best score: {0}".format(best_score))
-	labels_pred = best_clf.predict(features_test)
-	print("Best classification report:")
-	print(classification_report(labels_test, labels_pred))
+	# labels_pred = best_clf.predict(features_test)
+	# print("Best classification report:")
+	# print(classification_report(labels_test, labels_pred))
 
 	return best_clf
 
