@@ -22,7 +22,8 @@ from sklearn.metrics import classification_report, f1_score
 from sklearn.model_selection import GridSearchCV
 # from sklearn.cross_validation import train_test_split
 # from sklearn.model_selection import train_test_split
-from sklearn.model_selection import KFold, cross_val_score
+# from sklearn.model_selection import StratifiedKFold, cross_val_score
+from sklearn.cross_validation import StratifiedShuffleSplit
 
 pd.set_option('float_format', '{:f}'.format)
 pd.set_option('display.max_columns', 30)
@@ -84,26 +85,27 @@ def explore_dataset(features_list, data_dict, name=None, feature=None, createviz
 	print("\n\n")
 	print("Plot histograms for all numeric fields...")
 	df.hist(column=num_fields) #, bins=146)
-	plt.savefig('histograms_{0}.png'.format(createviz))
+	plt.savefig('figures/histograms_{0}.png'.format(createviz))
 
 	print("\n\n")
 	print("Plot scatter matrix for all numeric fields...")
 	scatter_matrix(df[num_fields], diagonal="kde")
-	plt.savefig('scatter_matrix_{0}.png'.format(createviz))
+	plt.savefig('figures/scatter_matrix_{0}.png'.format(createviz))
 
 	print("\n\n")
 	print("Plot box plots for all numeric fields by POI...")
 	df.boxplot(by="poi")
-	plt.savefig('boxplot_{0}.png'.format(createviz))
+	plt.savefig('figures/boxplot_{0}.png'.format(createviz))
 
 	plt.show()
 	return
 
 
-def remove_outliers(data_dict):
+def remove_outliers(data_dict, to_remove):
 	print("\n\n")
-	print("Removing TOTAL as not a person, just a spreadsheet artefact")
-	data_dict.pop("TOTAL", 0 )
+	for outlier in to_remove:
+		print("Removing {0} as not an actual individual".format(outlier))
+		data_dict.pop(outlier, 0 )
 	return #data_dict
 
 
@@ -172,7 +174,7 @@ def select_features(features_list, my_dataset):
 	print("Finding most important features...")
 	for n, imp in enumerate(clf.feature_importances_):
 		print "{0}, {1}, {2}".format(n, features_list[n+1], imp)
-		if imp > 0.0:
+		if imp > 0.1:
 			kbest+=1
 			selected_features_list.append(features_list[n+1])
 
@@ -185,45 +187,114 @@ def select_features(features_list, my_dataset):
 	# selected_features_list = list(compress(features_list, selector_list))
 	selected_features = selector.transform(features)
 
-	print("Selected {0} features".format(len(selected_features_list)))
+	print("\n\n")
+	print("Selected {0} features (including target variable)".format(len(selected_features_list)))
 	print("Selected features are: {0}".format(selected_features_list))
 
 	return selected_features_list, labels, selected_features
 
 
 def scale_features(original_features):
+	print("\n\n")
+	print("Rescaling features using MinMaxScaler")
 	scaler = MinMaxScaler()
 	# StandardScaler()
 	rescaled_features = scaler.fit_transform(original_features)
 	return rescaled_features
 
 
-def select_algorithm(labels, features): # , my_dataset, features_list):
+def test_classifier_get_score(clf, dataset, feature_list, folds = 1000):
+	## Copied from tester.py>test_classifier but with modified output
+
+	PERF_FORMAT_STRING = "\tAccuracy: {:>0.{display_precision}f}\tPrecision: {:>0.{display_precision}f}\t\
+		Recall: {:>0.{display_precision}f}\tF1: {:>0.{display_precision}f}\tF2: {:>0.{display_precision}f}"
+	# RESULTS_FORMAT_STRING = "\tTotal predictions: {:4d}\tTrue positives: {:4d}\tFalse positives: {:4d}\
+		# \tFalse negatives: {:4d}\tTrue negatives: {:4d}"
+
+	data = featureFormat(dataset, feature_list, sort_keys = True)
+	labels, features = targetFeatureSplit(data)
+	cv = StratifiedShuffleSplit(labels, folds, random_state = 42)
+	true_negatives = 0
+	false_negatives = 0
+	true_positives = 0
+	false_positives = 0
+	for train_idx, test_idx in cv: 
+		features_train = []
+		features_test  = []
+		labels_train   = []
+		labels_test    = []
+		for ii in train_idx:
+			features_train.append( features[ii] )
+			labels_train.append( labels[ii] )
+		for jj in test_idx:
+			features_test.append( features[jj] )
+			labels_test.append( labels[jj] )
+        
+		### fit the classifier using training set, and test on test set
+		clf.fit(features_train, labels_train)
+		predictions = clf.predict(features_test)
+		for prediction, truth in zip(predictions, labels_test):
+			if prediction == 0 and truth == 0:
+				true_negatives += 1
+			elif prediction == 0 and truth == 1:
+				false_negatives += 1
+			elif prediction == 1 and truth == 0:
+				false_positives += 1
+			elif prediction == 1 and truth == 1:
+				true_positives += 1
+			else:
+				print "Warning: Found a predicted label not == 0 or 1."
+				print "All predictions should take value 0 or 1."
+				print "Evaluating performance for processed predictions:"
+				break
+	try:
+		total_predictions = true_negatives + false_negatives + false_positives + true_positives
+		accuracy = 1.0*(true_positives + true_negatives)/total_predictions
+		precision = 1.0*true_positives/(true_positives+false_positives)
+		recall = 1.0*true_positives/(true_positives+false_negatives)
+		f1 = 2.0 * true_positives/(2*true_positives + false_positives+false_negatives)
+		f2 = (1+2.0*2.0) * precision*recall/(4*precision + recall)
+		print clf
+		print PERF_FORMAT_STRING.format(accuracy, precision, recall, f1, f2, display_precision = 3)
+		# print RESULTS_FORMAT_STRING.format(total_predictions, true_positives, false_positives, false_negatives, true_negatives)
+		print ""
+	except:
+		print "Got a divide by zero when trying out:", clf
+		print "Precision or recall may be undefined due to a lack of true positive predicitons."
+		f1 = 0
+
+	if f1 <> 0 and (precision < 0.3 or recall < 0.3):
+		f1 = 0
+
+	return f1
+
+
+def select_algorithm(X_all, y_all):
 	print("\n\n")
 
 	algos = [
-			{"Name": "NB",
-			"Classifier": GaussianNB(),
-			"ParamGrid": {
-			    },
-			},
-			{"Name": "SVM",
-			"Classifier": SVC(),
-			"ParamGrid": {
-				'kernel': ['linear', 'rbf'],
-				'C': [1, 1e3, 5e3, 1e4, 5e4, 1e5],
-			    'gamma': ['auto', 0.0001, 0.0005, 0.001, 0.005, 0.01, 0.1],
-			    'max_iter': [-1, 1, 2, 3, 4, 5],
-				},
-			},
-			{"Name": "KNN",
-			"Classifier": KNeighborsClassifier(),
-			"ParamGrid": {
-				"n_neighbors": [3, 4, 5, 6, 7, 8, 9],
-				"p": [1, 2, 3],
-				'algorithm': ['auto', 'ball_tree', 'kd_tree', 'brute'],
-			    },
-			},
+			# {"Name": "NB",
+			# "Classifier": GaussianNB(),
+			# "ParamGrid": {
+			#     },
+			# },
+			# {"Name": "SVM",
+			# "Classifier": SVC(),
+			# "ParamGrid": {
+			# 	'kernel': ['linear', 'rbf'],
+			# 	'C': [1, 1e3, 5e3, 1e4, 5e4, 1e5],
+			#     'gamma': ['auto', 0.0001, 0.0005, 0.001, 0.005, 0.01, 0.1],
+			#     'max_iter': [-1, 1, 2, 3, 4, 5],
+			# 	},
+			# },
+			# {"Name": "KNN",
+			# "Classifier": KNeighborsClassifier(),
+			# "ParamGrid": {
+			# 	"n_neighbors": [3, 4, 5, 6, 7, 8, 9],
+			# 	"p": [1, 2, 3],
+			# 	'algorithm': ['auto', 'ball_tree', 'kd_tree', 'brute'],
+			#     },
+			# },
 			{"Name": "ADA",
 			"Classifier": AdaBoostClassifier(),
 			"ParamGrid": {
@@ -232,40 +303,53 @@ def select_algorithm(labels, features): # , my_dataset, features_list):
 				'algorithm': ['SAMME', 'SAMME.R'],
 			    },
 			},
-			{"Name": "CART",
-			"Classifier": DecisionTreeClassifier(),
-			"ParamGrid": {
-				"min_samples_split": [2, 3, 4, 5],
-				"max_depth": [None, 4, 5, 6, 7, 8],
-				'criterion': ['gini', 'entropy'],
-			    },
-			},
+			# {"Name": "CART",
+			# "Classifier": DecisionTreeClassifier(),
+			# "ParamGrid": {
+			# 	"min_samples_split": [2, 3, 4, 5],
+			# 	"max_depth": [None, 4, 5, 6, 7, 8],
+			# 	'criterion': ['gini', 'entropy'],
+			#     },
+			# },
 		]
 
 	results = []
-	names = []
-	scoring = 'accuracy'
+	names = [d['Name'] for d in algos]
 	seed = 42
-	# sizes = [0.1] #, 0.2, 0.3] #, 0.4, 0.5] ## train_test_split
-	# sizes = [10] #5, 10, 15, 20] ## KFold
-	folds = 10 #int(1/size)
+	# # sizes = [0.1] #, 0.2, 0.3] #, 0.4, 0.5] ## train_test_split
+	# # sizes = [10] #5, 10, 15, 20] ## KFold
+	# folds = 10 #int(1/size)
+	# # cv_method = KFold(n_splits=folds, random_state=seed)
+	# cv_method = StratifiedKFold(n_splits=folds, random_state=seed)
+	# # scoring = 'accuracy'
+	# scoring = 'f1'
 
 	best_clf = None
 	best_score = 0
 
+	# print("Selecting algorithm using cross validation with {0} and {1} scoring".format(cv_method, scoring))
+	# print("Plus GridSearchCV for paramter tuning")
+	# print("Candidates are: {0}".format(names))
 	for algo in algos:
 		# name = algo["Classifier"].__doc__[:24].strip()
 		name = algo["Name"]
-		print("\n\n")
 
-		kfold = KFold(n_splits=folds, random_state=seed)
-		clf = GridSearchCV(algo["Classifier"], algo["ParamGrid"], cv=kfold)
-		cv_results = cross_val_score(clf, features, labels, cv=kfold, scoring=scoring)
-		results.append(cv_results)
-		names.append(name)
-		score = cv_results.mean()
-		msg = "{0}: {1} ({2})".format(name, score, cv_results.std())
-		print(msg)
+		clf = GridSearchCV(algo["Classifier"], algo["ParamGrid"]) #, cv=kfold)
+		clf.fit(X_all, y_all)
+		# clf = algo["Classifier"]
+
+		print("\n\n")
+		print("{0}".format(name))
+		# print("{0}".format(clf))
+		# for scoring in ['accuracy', 'recall', 'precision', 'f1']:
+		# 	cv_results = cross_val_score(clf, X_all, y_all, cv=cv_method, scoring=scoring)
+		# 	results.append(cv_results)
+		# 	# names.append(name)
+		# 	score = cv_results.mean()
+		# 	stdev = cv_results.std()
+
+		# 	# print("\n\n")
+		# 	print("{0}: {1} ({2})".format(scoring, score, stdev))
 
 		# print("Attempting with test_size={0}, using {1}...".format(size, name))
 		# features_train, features_test, labels_train, labels_test = \
@@ -299,24 +383,24 @@ def select_algorithm(labels, features): # , my_dataset, features_list):
 		# f1 = f1_score(labels_test, labels_pred)
 		# print("F1 score: {0}".format(f1))
 
-		# # test_classifier(clf, my_dataset, features_list)
+		# test_classifier(clf, my_dataset, features_list)
+		score = test_classifier_get_score(clf, my_dataset, features_list)
+		print("Score: {0}".format(score))
 
 		if score > best_score:
 			best_score = score
-			clf.fit(features, labels)
-			best_clf = clf.best_estimator_
+			best_clf = clf #.best_estimator_
 		# # if f1 > best_score:
 		# # 	best_score = f1
 		# # 	best_clf = clf.best_estimator_
 
-	# boxplot algorithm comparison
-	fig = plt.figure()
-	fig.suptitle('Algorithm Comparison')
-	ax = fig.add_subplot(111)
-	plt.boxplot(results)
-	ax.set_xticklabels(names)
-	plt.savefig('algorithm_comparison.png')
-	plt.show()
+	# fig = plt.figure()
+	# fig.suptitle('Algorithm Comparison')
+	# ax = fig.add_subplot(111)
+	# plt.boxplot(results)
+	# ax.set_xticklabels(names)
+	# plt.savefig('figures/algorithm_comparison.png')
+	# plt.show()
 
 	print("\n\n")				
 	print("Best classifier:")
@@ -326,6 +410,7 @@ def select_algorithm(labels, features): # , my_dataset, features_list):
 	# print("Best classification report:")
 	# print(classification_report(labels_test, labels_pred))
 
+	print("\n\n")
 	return best_clf
 
 
@@ -346,7 +431,8 @@ explore_dataset(features_list, data_dict, feature="email_address")
 
 ### Task 2: Remove outliers
 explore_dataset(features_list, data_dict, name="TOTAL")
-remove_outliers(data_dict)
+explore_dataset(features_list, data_dict, name="THE TRAVEL AGENCY IN THE PARK")
+remove_outliers(data_dict, ["TOTAL", "THE TRAVEL AGENCY IN THE PARK"])
 
 ### Task 3: Create new feature(s)
 features_list = add_features(features_list, data_dict)
@@ -367,7 +453,7 @@ features = scale_features(features)
 # Provided to give you a starting point. Try a variety of classifiers.
 # from sklearn.naive_bayes import GaussianNB
 # clf = GaussianNB()
-clf = select_algorithm(labels, features) #, my_dataset, features_list)
+clf = select_algorithm(features, labels) #, my_dataset, features_list)
 
 ### Task 5: Tune your classifier to achieve better than .3 precision and recall 
 ### using our testing script. Check the tester.py script in the final project
