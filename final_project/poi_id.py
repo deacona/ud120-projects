@@ -7,7 +7,7 @@ import pandas as pd
 from pandas.tools.plotting import scatter_matrix
 import numpy as np
 import matplotlib.pyplot as plt
-from itertools import compress
+# from itertools import compress
 from time import time
 
 from sklearn.feature_selection import SelectKBest, f_classif
@@ -17,7 +17,7 @@ from sklearn.svm import SVC
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.ensemble.weight_boosting import AdaBoostClassifier
 from sklearn.preprocessing import MinMaxScaler
-from sklearn.metrics import classification_report, f1_score
+# from sklearn.metrics import classification_report, f1_score
 # from sklearn.grid_search import GridSearchCV
 from sklearn.model_selection import GridSearchCV
 # from sklearn.cross_validation import train_test_split
@@ -206,8 +206,7 @@ def scale_features(original_features):
 def test_classifier_get_score(clf, dataset, feature_list, folds = 1000):
 	## Copied from tester.py>test_classifier but with modified output
 
-	PERF_FORMAT_STRING = "\tAccuracy: {:>0.{display_precision}f}\tPrecision: {:>0.{display_precision}f}\t\
-		Recall: {:>0.{display_precision}f}\tF1: {:>0.{display_precision}f}\tF2: {:>0.{display_precision}f}"
+	PERF_FORMAT_STRING = "\nAccuracy: {:>0.{display_precision}f}\nPrecision: {:>0.{display_precision}f}\nRecall: {:>0.{display_precision}f}\nF1: {:>0.{display_precision}f}\nF2: {:>0.{display_precision}f}"
 	# RESULTS_FORMAT_STRING = "\tTotal predictions: {:4d}\tTrue positives: {:4d}\tFalse positives: {:4d}\
 		# \tFalse negatives: {:4d}\tTrue negatives: {:4d}"
 
@@ -281,10 +280,10 @@ def select_algorithm(X_all, y_all):
 			# {"Name": "SVM",
 			# "Classifier": SVC(),
 			# "ParamGrid": {
-			# 	'kernel': ['linear', 'rbf'],
-			# 	'C': [1, 1e3, 5e3, 1e4, 5e4, 1e5],
-			#     'gamma': ['auto', 0.0001, 0.0005, 0.001, 0.005, 0.01, 0.1],
-			#     'max_iter': [-1, 1, 2, 3, 4, 5],
+			# 	# 'kernel': ['linear', 'rbf'],
+			# 	# 'C': [1, 1e3, 5e3, 1e4, 5e4, 1e5],
+			#  #    'gamma': ['auto', 0.0001, 0.0005, 0.001, 0.005, 0.01, 0.1],
+			#  #    'max_iter': [-1, 1, 2, 3, 4, 5],
 			# 	},
 			# },
 			# {"Name": "KNN",
@@ -316,99 +315,39 @@ def select_algorithm(X_all, y_all):
 	results = []
 	names = [d['Name'] for d in algos]
 	seed = 42
-	# # sizes = [0.1] #, 0.2, 0.3] #, 0.4, 0.5] ## train_test_split
-	# # sizes = [10] #5, 10, 15, 20] ## KFold
-	# folds = 10 #int(1/size)
-	# # cv_method = KFold(n_splits=folds, random_state=seed)
-	# cv_method = StratifiedKFold(n_splits=folds, random_state=seed)
-	# # scoring = 'accuracy'
-	# scoring = 'f1'
 
 	best_clf = None
 	best_score = 0
 
-	# print("Selecting algorithm using cross validation with {0} and {1} scoring".format(cv_method, scoring))
-	# print("Plus GridSearchCV for paramter tuning")
-	# print("Candidates are: {0}".format(names))
+	print("Selecting algorithm using cross validation")
+	print("With GridSearchCV for paramter tuning")
+	print("Candidates are: {0}".format(names))
 	for algo in algos:
 		# name = algo["Classifier"].__doc__[:24].strip()
 		name = algo["Name"]
-
-		clf = GridSearchCV(algo["Classifier"], algo["ParamGrid"]) #, cv=kfold)
-		clf.fit(X_all, y_all)
-		# clf = algo["Classifier"]
-
 		print("\n\n")
 		print("{0}".format(name))
-		# print("{0}".format(clf))
-		# for scoring in ['accuracy', 'recall', 'precision', 'f1']:
-		# 	cv_results = cross_val_score(clf, X_all, y_all, cv=cv_method, scoring=scoring)
-		# 	results.append(cv_results)
-		# 	# names.append(name)
-		# 	score = cv_results.mean()
-		# 	stdev = cv_results.std()
 
-		# 	# print("\n\n")
-		# 	print("{0}: {1} ({2})".format(scoring, score, stdev))
+		t0 = time()
+		clf_grid = GridSearchCV(algo["Classifier"], algo["ParamGrid"]) #, cv=kfold)
+		clf_grid.fit(X_all, y_all)
+		clf = clf_grid.best_estimator_
+		print("Parameters tuned in %0.3fs" % (time() - t0))
 
-		# print("Attempting with test_size={0}, using {1}...".format(size, name))
-		# features_train, features_test, labels_train, labels_test = \
-		#     train_test_split(features, labels, test_size=size, random_state=42)
-		# print("Attempting with kfolds={0}, using {1}...".format(size, name))
-		# kf = KFold(n_splits=size, shuffle=True, random_state=42)
-		# for train_index, test_index in kf.split(features):
-			# features_train = [features[ii] for ii in train_index]
-			# features_test = [features[ii] for ii in test_index]
-			# labels_train = [labels[ii] for ii in train_index]
-			# labels_test = [labels[ii] for ii in test_index]
-		# print("Attempting with GridSearchCV(cv={0}), using {1}...".format(folds, name))
-		# features_train = features
-		# labels_train = labels
-		# features_test = features
-		# labels_test = labels
-
-		# t0 = time()
-		# clf = GridSearchCV(algo["Classifier"], algo["ParamGrid"], cv=folds)
-		# clf.fit(features_train, labels_train)
-		# print("Done in %0.3fs" % (time() - t0))
-		# print("Best estimator found by grid search:")
-		# print(clf.best_estimator_)
-		# score = clf.score(features_test, labels_test)
-		# print("Score: {0}".format(score))
-
-		# labels_pred = clf.predict(features_test)
-		# print("Classification report:")
-		# print(classification_report(labels_test, labels_pred))
-
-		# f1 = f1_score(labels_test, labels_pred)
-		# print("F1 score: {0}".format(f1))
-
+		t0 = time()
 		# test_classifier(clf, my_dataset, features_list)
 		score = test_classifier_get_score(clf, my_dataset, features_list)
+		print("Algorithm validated in %0.3fs" % (time() - t0))
 		print("Score: {0}".format(score))
 
 		if score > best_score:
 			best_score = score
-			best_clf = clf #.best_estimator_
-		# # if f1 > best_score:
-		# # 	best_score = f1
-		# # 	best_clf = clf.best_estimator_
-
-	# fig = plt.figure()
-	# fig.suptitle('Algorithm Comparison')
-	# ax = fig.add_subplot(111)
-	# plt.boxplot(results)
-	# ax.set_xticklabels(names)
-	# plt.savefig('figures/algorithm_comparison.png')
-	# plt.show()
+			best_clf = clf
 
 	print("\n\n")				
 	print("Best classifier:")
 	print(best_clf)
 	print("Best score: {0}".format(best_score))
-	# labels_pred = best_clf.predict(features_test)
-	# print("Best classification report:")
-	# print(classification_report(labels_test, labels_pred))
 
 	print("\n\n")
 	return best_clf
