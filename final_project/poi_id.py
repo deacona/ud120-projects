@@ -34,12 +34,10 @@ sys.path.append("../tools/")
 from feature_format import featureFormat, targetFeatureSplit
 from tester import dump_classifier_and_data, test_classifier
 
-NOSTATS=True
+SHOWVIZ=False
 
 
 def explore_dataset(features_list, data_dict, name=None, feature=None, createviz=None):
-	if NOSTATS:
-		return
 	print("\n\n")		
 	df = pd.DataFrame.from_dict(data_dict, orient='index')
 	df.replace({"NaN": np.nan}, inplace=True)
@@ -48,7 +46,7 @@ def explore_dataset(features_list, data_dict, name=None, feature=None, createviz
 	if name:
 		print("\n\n")
 		print("Name: {0}...".format(name))
-		print(df.loc[name])
+		print(df.loc[name].head(20))
 		return
 
 	if feature:
@@ -67,7 +65,9 @@ def explore_dataset(features_list, data_dict, name=None, feature=None, createviz
 	print("\n\nDESCRIBE...")
 	print(df.describe(include="all"))
 
-	if not createviz:
+	if (not SHOWVIZ):
+		return
+	if (not createviz):
 		return
 
 	print("\n\n")
@@ -203,7 +203,7 @@ def scale_features(original_features):
 	return rescaled_features
 
 
-def test_classifier_get_score(clf, dataset, feature_list, folds = 1000):
+def tune_and_test_classifier(clf, params, dataset, feature_list, folds = 1000):
 	## Copied from tester.py>test_classifier but with modified output
 
 	PERF_FORMAT_STRING = "\nAccuracy: {:>0.{display_precision}f}\nPrecision: {:>0.{display_precision}f}\nRecall: {:>0.{display_precision}f}\nF1: {:>0.{display_precision}f}\nF2: {:>0.{display_precision}f}"
@@ -213,6 +213,11 @@ def test_classifier_get_score(clf, dataset, feature_list, folds = 1000):
 	data = featureFormat(dataset, feature_list, sort_keys = True)
 	labels, features = targetFeatureSplit(data)
 	cv = StratifiedShuffleSplit(labels, folds, random_state = 42)
+
+	gcv = GridSearchCV(clf, params,cv=cv)
+	gcv.fit(features,labels)
+	gcv_best = gcv.best_estimator_
+
 	true_negatives = 0
 	false_negatives = 0
 	true_positives = 0
@@ -230,8 +235,8 @@ def test_classifier_get_score(clf, dataset, feature_list, folds = 1000):
 			labels_test.append( labels[jj] )
         
 		### fit the classifier using training set, and test on test set
-		clf.fit(features_train, labels_train)
-		predictions = clf.predict(features_test)
+		gcv_best.fit(features_train, labels_train)
+		predictions = gcv_best.predict(features_test)
 		for prediction, truth in zip(predictions, labels_test):
 			if prediction == 0 and truth == 0:
 				true_negatives += 1
@@ -253,19 +258,19 @@ def test_classifier_get_score(clf, dataset, feature_list, folds = 1000):
 		recall = 1.0*true_positives/(true_positives+false_negatives)
 		f1 = 2.0 * true_positives/(2*true_positives + false_positives+false_negatives)
 		f2 = (1+2.0*2.0) * precision*recall/(4*precision + recall)
-		print clf
+		print gcv_best
 		print PERF_FORMAT_STRING.format(accuracy, precision, recall, f1, f2, display_precision = 3)
 		# print RESULTS_FORMAT_STRING.format(total_predictions, true_positives, false_positives, false_negatives, true_negatives)
 		print ""
 	except:
-		print "Got a divide by zero when trying out:", clf
+		print "Got a divide by zero when trying out:", gcv_best
 		print "Precision or recall may be undefined due to a lack of true positive predicitons."
 		f1 = 0
 
 	if f1 <> 0 and (precision < 0.3 or recall < 0.3):
 		f1 = 0
 
-	return f1
+	return f1, gcv_best
 
 
 def select_algorithm(X_all, y_all):
@@ -320,7 +325,7 @@ def select_algorithm(X_all, y_all):
 	best_score = 0
 
 	print("Selecting algorithm using cross validation")
-	print("With GridSearchCV for paramter tuning")
+	print("With GridSearchCV for parameter tuning")
 	print("Candidates are: {0}".format(names))
 	for algo in algos:
 		# name = algo["Classifier"].__doc__[:24].strip()
@@ -328,21 +333,21 @@ def select_algorithm(X_all, y_all):
 		print("\n\n")
 		print("{0}".format(name))
 
-		t0 = time()
-		clf_grid = GridSearchCV(algo["Classifier"], algo["ParamGrid"]) #, cv=kfold)
-		clf_grid.fit(X_all, y_all)
-		clf = clf_grid.best_estimator_
-		print("Parameters tuned in %0.3fs" % (time() - t0))
+		# t0 = time()
+		# clf_grid = GridSearchCV(algo["Classifier"], algo["ParamGrid"]) #, cv=kfold)
+		# clf_grid.fit(X_all, y_all)
+		# clf = clf_grid.best_estimator_
+		# print("Parameters tuned in %0.3fs" % (time() - t0))
 
 		t0 = time()
 		# test_classifier(clf, my_dataset, features_list)
-		score = test_classifier_get_score(clf, my_dataset, features_list)
-		print("Algorithm validated in %0.3fs" % (time() - t0))
-		print("Score: {0}".format(score))
+		cv_score, cv_clf = tune_and_test_classifier(algo["Classifier"], algo["ParamGrid"], my_dataset, features_list)
+		print("Algorithm tuned and tested in %0.3fs" % (time() - t0))
+		print("Score: {0}".format(cv_score))
 
-		if score > best_score:
-			best_score = score
-			best_clf = clf
+		if cv_score > best_score:
+			best_score = cv_score
+			best_clf = cv_clf
 
 	print("\n\n")				
 	print("Best classifier:")
