@@ -7,7 +7,6 @@ import pandas as pd
 from pandas.tools.plotting import scatter_matrix
 import numpy as np
 import matplotlib.pyplot as plt
-# from itertools import compress
 from time import time
 
 from sklearn.feature_selection import SelectKBest, f_classif
@@ -17,24 +16,20 @@ from sklearn.svm import SVC
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.ensemble.weight_boosting import AdaBoostClassifier
 from sklearn.preprocessing import MinMaxScaler
-# from sklearn.metrics import classification_report, f1_score
-# from sklearn.grid_search import GridSearchCV
 from sklearn.model_selection import GridSearchCV
-# from sklearn.cross_validation import train_test_split
-# from sklearn.model_selection import train_test_split
-# from sklearn.model_selection import StratifiedKFold, cross_val_score
 from sklearn.cross_validation import StratifiedShuffleSplit
 
 pd.set_option('float_format', '{:f}'.format)
 pd.set_option('display.max_columns', 30)
-# pd.set_option('display.expand_frame_repr', False)
 
 sys.path.append("../tools/")
 
 from feature_format import featureFormat, targetFeatureSplit
 from tester import dump_classifier_and_data, test_classifier
 
-SHOWVIZ=False
+SHOWVIZ = True
+SEED = 42
+MINIMP = 0.1
 
 
 def explore_dataset(features_list, data_dict, name=None, feature=None, createviz=None):
@@ -174,7 +169,7 @@ def select_features(features_list, my_dataset):
 	print("Finding most important features...")
 	for n, imp in enumerate(clf.feature_importances_):
 		print "{0}, {1}, {2}".format(n, features_list[n+1], imp)
-		if imp > 0.1:
+		if imp > MINIMP:
 			kbest+=1
 			selected_features_list.append(features_list[n+1])
 
@@ -182,9 +177,6 @@ def select_features(features_list, my_dataset):
 	selector = SelectKBest(f_classif, k=kbest)
 	selector.fit(features, labels)
 
-	# selector_list = [True]+selector.get_support().tolist() ## so poi always included
-
-	# selected_features_list = list(compress(features_list, selector_list))
 	selected_features = selector.transform(features)
 
 	print("\n\n")
@@ -212,7 +204,7 @@ def tune_and_test_classifier(clf, params, dataset, feature_list, folds = 1000):
 
 	data = featureFormat(dataset, feature_list, sort_keys = True)
 	labels, features = targetFeatureSplit(data)
-	cv = StratifiedShuffleSplit(labels, folds, random_state = 42)
+	cv = StratifiedShuffleSplit(labels, folds, random_state = SEED)
 
 	gcv = GridSearchCV(clf, params,cv=cv)
 	gcv.fit(features,labels)
@@ -277,28 +269,28 @@ def select_algorithm(X_all, y_all):
 	print("\n\n")
 
 	algos = [
-			# {"Name": "NB",
-			# "Classifier": GaussianNB(),
-			# "ParamGrid": {
-			#     },
-			# },
-			# {"Name": "SVM",
-			# "Classifier": SVC(),
-			# "ParamGrid": {
-			# 	# 'kernel': ['linear', 'rbf'],
-			# 	# 'C': [1, 1e3, 5e3, 1e4, 5e4, 1e5],
-			#  #    'gamma': ['auto', 0.0001, 0.0005, 0.001, 0.005, 0.01, 0.1],
-			#  #    'max_iter': [-1, 1, 2, 3, 4, 5],
-			# 	},
-			# },
-			# {"Name": "KNN",
-			# "Classifier": KNeighborsClassifier(),
-			# "ParamGrid": {
-			# 	"n_neighbors": [3, 4, 5, 6, 7, 8, 9],
-			# 	"p": [1, 2, 3],
-			# 	'algorithm': ['auto', 'ball_tree', 'kd_tree', 'brute'],
-			#     },
-			# },
+			{"Name": "NB",
+			"Classifier": GaussianNB(),
+			"ParamGrid": {
+			    },
+			},
+			{"Name": "SVM",
+			"Classifier": SVC(),
+			"ParamGrid": {
+				# 'kernel': ['linear', 'rbf'],
+				# 'C': [1, 1e3, 5e3, 1e4, 5e4, 1e5],
+			 #    'gamma': ['auto', 0.0001, 0.0005, 0.001, 0.005, 0.01, 0.1],
+			 #    'max_iter': [-1, 1, 2, 3, 4, 5],
+				},
+			},
+			{"Name": "KNN",
+			"Classifier": KNeighborsClassifier(),
+			"ParamGrid": {
+				"n_neighbors": [3, 4, 5, 6, 7, 8, 9],
+				"p": [1, 2, 3],
+				'algorithm': ['auto', 'ball_tree', 'kd_tree', 'brute'],
+			    },
+			},
 			{"Name": "ADA",
 			"Classifier": AdaBoostClassifier(),
 			"ParamGrid": {
@@ -307,19 +299,18 @@ def select_algorithm(X_all, y_all):
 				'algorithm': ['SAMME', 'SAMME.R'],
 			    },
 			},
-			# {"Name": "CART",
-			# "Classifier": DecisionTreeClassifier(),
-			# "ParamGrid": {
-			# 	"min_samples_split": [2, 3, 4, 5],
-			# 	"max_depth": [None, 4, 5, 6, 7, 8],
-			# 	'criterion': ['gini', 'entropy'],
-			#     },
-			# },
+			{"Name": "CART",
+			"Classifier": DecisionTreeClassifier(),
+			"ParamGrid": {
+				"min_samples_split": [2, 3, 4, 5],
+				"max_depth": [None, 4, 5, 6, 7, 8],
+				'criterion': ['gini', 'entropy'],
+			    },
+			},
 		]
 
 	results = []
 	names = [d['Name'] for d in algos]
-	seed = 42
 
 	best_clf = None
 	best_score = 0
@@ -333,14 +324,7 @@ def select_algorithm(X_all, y_all):
 		print("\n\n")
 		print("{0}".format(name))
 
-		# t0 = time()
-		# clf_grid = GridSearchCV(algo["Classifier"], algo["ParamGrid"]) #, cv=kfold)
-		# clf_grid.fit(X_all, y_all)
-		# clf = clf_grid.best_estimator_
-		# print("Parameters tuned in %0.3fs" % (time() - t0))
-
 		t0 = time()
-		# test_classifier(clf, my_dataset, features_list)
 		cv_score, cv_clf = tune_and_test_classifier(algo["Classifier"], algo["ParamGrid"], my_dataset, features_list)
 		print("Algorithm tuned and tested in %0.3fs" % (time() - t0))
 		print("Score: {0}".format(cv_score))
@@ -353,6 +337,8 @@ def select_algorithm(X_all, y_all):
 	print("Best classifier:")
 	print(best_clf)
 	print("Best score: {0}".format(best_score))
+
+	assert best_score > 0, "THRESHOLD NOT MET"
 
 	print("\n\n")
 	return best_clf
