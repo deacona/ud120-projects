@@ -80,17 +80,17 @@ def explore_dataset(features_list, data_dict, name=None, feature=None, createviz
 	print("\n\n")
 	print("Plot histograms for all numeric fields...")
 	df.hist(column=num_fields) #, bins=146)
-	plt.savefig('figures/histograms_{0}.png'.format(createviz))
+	plt.savefig('histograms_{0}.png'.format(createviz))
 
 	print("\n\n")
 	print("Plot scatter matrix for all numeric fields...")
 	scatter_matrix(df[num_fields], diagonal="kde")
-	plt.savefig('figures/scatter_matrix_{0}.png'.format(createviz))
+	plt.savefig('scatter_matrix_{0}.png'.format(createviz))
 
 	print("\n\n")
 	print("Plot box plots for all numeric fields by POI...")
 	df.boxplot(by="poi")
-	plt.savefig('figures/boxplot_{0}.png'.format(createviz))
+	plt.savefig('boxplot_{0}.png'.format(createviz))
 
 	plt.show()
 	return
